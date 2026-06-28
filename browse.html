@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maya Command Browser</title>
+<style>
+:root {
+  --bg: #1e1e2e;
+  --bg2: #262637;
+  --bg3: #2e2e42;
+  --text: #cdd6f4;
+  --text2: #a6adc8;
+  --text3: #6c7086;
+  --accent: #89b4fa;
+  --accent2: #74c7ec;
+  --green: #a6e3a1;
+  --yellow: #f9e2af;
+  --red: #f38ba8;
+  --border: #45475a;
+  --code-bg: #181825;
+  --scrollbar: #45475a;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  flex-shrink: 0;
+}
+header h1 { font-size:16px; font-weight:600; white-space:nowrap; }
+header h1 span { color: var(--text3); font-weight:400; }
+.version-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 3px;
+  margin-left: 8px;
+}
+.version-btn {
+  padding: 4px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text2);
+  transition: all .15s;
+}
+.version-btn:hover { color: var(--text); }
+.version-btn.active { background: var(--accent); color: var(--bg); font-weight: 600; }
+.search-wrap {
+  flex: 1;
+  position: relative;
+}
+.search-wrap input {
+  width: 100%;
+  padding: 7px 12px 7px 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap svg {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--text3);
+}
+.stats {
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.lang-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.lang-btn:hover { background: var(--bg3); color: var(--text); }
+
+/* Layout */
+main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+aside {
+  width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  padding: 8px 0;
+}
+aside::-webkit-scrollbar { width: 6px; }
+aside::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+.cat-group {
+  margin-bottom: 2px;
+}
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  user-select: none;
+  transition: background .1s;
+}
+.cat-header:hover { background: var(--bg3); }
+.cat-header svg {
+  width: 14px; height: 14px;
+  color: var(--text3);
+  transition: transform .15s;
+  flex-shrink: 0;
+}
+.cat-header .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 400;
+}
+.cat-group.open .cat-header svg { transform: rotate(90deg); }
+.cat-subs { display: none; }
+.cat-group.open .cat-subs { display: block; }
+
+.sub-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px 5px 36px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  transition: all .1s;
+  user-select: none;
+}
+.sub-item:hover { background: var(--bg3); color: var(--text); }
+.sub-item.active { background: var(--bg3); color: var(--accent); }
+.sub-item .sub-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text3);
+}
+.sidebar-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* Content */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* List panel */
+#list-panel {
+  width: 100%;
+  height: 42%;
+  border-bottom: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+#list-panel::-webkit-scrollbar { width: 6px; }
+#list-panel::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+.list-header {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text3);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid transparent;
+  transition: all .1s;
+}
+.list-item:hover { background: var(--bg2); }
+.list-item.active { background: var(--bg3); border-left: 3px solid var(--accent); padding-left: 13px; }
+.list-item .cmd-name {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: var(--accent2);
+  font-size: 13px;
+}
+.list-item .cmd-brief {
+  color: var(--text3);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.list-item .cmd-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg3);
+  color: var(--text3);
+  white-space: nowrap;
+}
+.list-item .cmd-badge.mel { background: #3a3040; color: #cba6f7; }
+
+/* Detail panel */
+#detail-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+#detail-panel::-webkit-scrollbar { width: 6px; }
+#detail-panel::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+.detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  font-size: 14px;
+}
+.detail-cmd-name {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 4px;
+}
+.detail-cmd-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.detail-cmd-name a:hover { text-decoration: underline; }
+.detail-url {
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.detail-url a { color: var(--accent); text-decoration: none; }
+.detail-url a:hover { text-decoration: underline; }
+.detail-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+.detail-meta span {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg3);
+  color: var(--text2);
+}
+.detail-meta .mel-tag { background: #3a3040; color: #cba6f7; }
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  margin-top: 20px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text2);
+  white-space: pre-wrap;
+}
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+}
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.copy-btn:hover { background: var(--bg); color: var(--text); }
+.code-block pre {
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  font-size: 14px;
+  flex-direction: column;
+  gap: 8px;
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Maya<span>Cmd</span></h1>
+  <div class="version-bar" id="versionBar"></div>
+  <div class="search-wrap" style="max-width:360px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" id="searchInput" data-i18n-placeholder="search" placeholder="Search commands...">
+  </div>
+  <div class="stats" id="statsBar"></div>
+  <button class="lang-btn" id="langBtn" onclick="toggleLang()" title="Switch language">中</button>
+</header>
+
+<main>
+  <aside id="sidebar"><div class="sidebar-empty" data-i18n="selectVer">Select a version</div></aside>
+  <div id="content">
+    <div id="list-panel"><div class="loading" data-i18n="selectVerBrowse">Select a version to browse</div></div>
+    <div id="detail-panel"><div class="detail-empty" data-i18n="selectCmd">Select a command to view details</div></div>
+  </div>
+</main>
+
+<script>
+const VERSIONS = ['2025', '2022', '2020'];
+const BASE = './output';
+
+// --- i18n ---
+const I18N = {
+  zh: {
+    search: '搜索命令...',
+    selectVer: '请选择版本',
+    selectVerBrowse: '请选择版本浏览命令',
+    selectCmd: '选择命令查看详情',
+    loading: '加载中...',
+    loadingCats: '加载分类...',
+    loadingCmds: '加载命令...',
+    errorPrefix: '错误',
+    needServer: '请通过本地服务器打开',
+    errorLoad: '加载数据失败',
+    commands: '个命令',
+    scraped: '已抓取',
+    missing: '缺失',
+    noResults: '没有匹配的命令',
+    melScript: 'MEL脚本',
+    noDesc: '无描述',
+    pyExample: 'Python 示例',
+    description: '描述',
+    copy: '复制',
+    copied: '已复制!',
+    uncategorized: '未分类',
+    general: '通用',
+    switchLang: 'Switch to English',
+  },
+  en: {
+    search: 'Search commands...',
+    selectVer: 'Select a version',
+    selectVerBrowse: 'Select a version to browse',
+    selectCmd: 'Select a command to view details',
+    loading: 'Loading...',
+    loadingCats: 'Loading categories...',
+    loadingCmds: 'Loading commands...',
+    errorPrefix: 'Error',
+    needServer: 'Run with a local server',
+    errorLoad: 'Error loading data',
+    commands: 'commands',
+    scraped: 'scraped',
+    missing: 'missing',
+    noResults: 'No commands found',
+    melScript: 'MEL Script',
+    noDesc: 'No description available.',
+    pyExample: 'Python Example',
+    description: 'Description',
+    copy: 'Copy',
+    copied: 'Copied!',
+    uncategorized: 'Uncategorized',
+    general: 'General',
+    switchLang: '切换到中文',
+  },
+};
+
+let lang = localStorage.getItem('maya-browser-lang') || 'zh';
+function t(key) { return I18N[lang]?.[key] || I18N.en[key] || key; }
+function toggleLang() {
+  lang = lang === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('maya-browser-lang', lang);
+  hydrate();
+  // re-render current state
+  if (commandsData) {
+    updateStats();
+    renderSidebar();
+    renderList();
+    if (selectedCmd) selectCommand(selectedCmd.name);
+  } else {
+    updateEmptyStates();
+  }
+}
+function hydrate() {
+  document.getElementById('langBtn').textContent = lang === 'zh' ? '中' : 'EN';
+  document.getElementById('langBtn').title = t('switchLang');
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  // update static elements with data-i18n-* attrs
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  updateEmptyStates();
+}
+
+function updateEmptyStates() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+}
+
+let currentVersion = null;
+let commandsData = null;
+let indexData = null;
+let filteredCommands = [];
+let selectedCmd = null;
+
+// --- Init ---
+function init() {
+  renderVersionBar();
+  hydrate();
+  loadVersion(VERSIONS[0]);
+}
+init();
+
+function renderVersionBar() {
+  const bar = document.getElementById('versionBar');
+  bar.innerHTML = VERSIONS.map(v =>
+    `<button class="version-btn" data-ver="${v}" onclick="switchVersion('${v}')">${v}</button>`
+  ).join('');
+}
+
+async function loadVersion(ver) {
+  currentVersion = ver;
+  document.querySelectorAll('.version-btn').forEach(b => b.classList.toggle('active', b.dataset.ver === ver));
+  document.getElementById('statsBar').textContent = t('loading');
+  document.getElementById('sidebar').innerHTML = `<div class="loading"><div class="spinner"></div>${t('loadingCats')}</div>`;
+  document.getElementById('list-panel').innerHTML = `<div class="loading"><div class="spinner"></div>${t('loadingCmds')}</div>`;
+  document.getElementById('detail-panel').innerHTML = `<div class="detail-empty">${t('loading')}</div>`;
+
+  try {
+    const [idx, cmd] = await Promise.all([
+      fetch(`${BASE}/${ver}/index.json`).then(r => r.json()),
+      fetch(`${BASE}/${ver}/maya_commands_python.json`).then(r => r.json())
+    ]);
+    indexData = idx;
+    commandsData = cmd;
+    updateStats();
+    renderSidebar();
+    filterCommands();
+  } catch(e) {
+    document.getElementById('sidebar').innerHTML = `<div class="sidebar-empty">${t('errorPrefix')}: ${e.message}<br><small>${t('needServer')}</small></div>`;
+    document.getElementById('statsBar').textContent = t('errorLoad');
+  }
+}
+
+function switchVersion(ver) {
+  if (ver === currentVersion) return;
+  selectedCmd = null;
+  document.getElementById('detail-panel').innerHTML = `<div class="detail-empty">${t('selectCmd')}</div>`;
+  loadVersion(ver);
+}
+
+// --- Stats ---
+function updateStats() {
+  const m = commandsData.meta;
+  document.getElementById('statsBar').textContent =
+    `${m.total} ${t('commands')} \u00b7 ${m.success} ${t('scraped')} \u00b7 ${m.errors} ${t('missing')}`;
+}
+
+// --- Sidebar ---
+function renderSidebar() {
+  const cats = {};
+  for (const [name, info] of Object.entries(indexData)) {
+    const catKey = info.category || t('uncategorized');
+    const subKey = info.subcategory || t('general');
+    if (!cats[catKey]) cats[catKey] = {};
+    if (!cats[catKey][subKey]) cats[catKey][subKey] = [];
+    cats[catKey][subKey].push({ name, info });
+  }
+
+  let html = '';
+  const catNames = Object.keys(cats).sort();
+  for (const cat of catNames) {
+    const subs = cats[cat];
+    const totalInCat = Object.values(subs).reduce((s, arr) => s + arr.length, 0);
+    html += `<div class="cat-group open">
+      <div class="cat-header" onclick="this.parentElement.classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+        ${cat}
+        <span class="count">${totalInCat}</span>
+      </div>
+      <div class="cat-subs">`;
+
+    const subNames = Object.keys(subs).sort();
+    for (const sub of subNames) {
+      const arr = subs[sub];
+      // use first item's raw category/subcategory for filtering
+      const rawCat = arr[0].info.category || '';
+      const rawSub = arr[0].info.subcategory || '';
+      html += `<div class="sub-item" data-raw-cat="${encodeURI(rawCat)}" data-raw-sub="${encodeURI(rawSub)}" onclick="selectCategory(this)" title="${sub} (${arr.length})">
+        ${sub}
+        <span class="sub-count">${arr.length}</span>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function selectCategory(el) {
+  document.querySelectorAll('.sub-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  filterCommands(decodeURI(el.dataset.rawCat), decodeURI(el.dataset.rawSub));
+}
+
+// --- Filter ---
+function filterCommands(cat, sub) {
+  if (!commandsData) return;
+
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+  const hasCatFilter = cat !== undefined;
+  const hasSubFilter = sub !== undefined;
+
+  filteredCommands = commandsData.commands.filter(cmd => {
+    if (!cmd.name) return false;
+    const info = indexData[cmd.name] || {};
+    if (hasCatFilter && (info.category || '') !== (cat || '')) return false;
+    if (hasSubFilter && (info.subcategory || '') !== (sub || '')) return false;
+    if (searchTerm) {
+      const desc = (cmd.description || '').toLowerCase();
+      return cmd.name.toLowerCase().includes(searchTerm) || desc.includes(searchTerm);
+    }
+    return true;
+  });
+
+  renderList();
+}
+
+document.getElementById('searchInput').addEventListener('input', () => {
+  filterCommands();
+});
+
+// --- Command List ---
+function renderList() {
+  const panel = document.getElementById('list-panel');
+  if (filteredCommands.length === 0) {
+    panel.innerHTML = `<div class="sidebar-empty" style="padding:40px">${t('noResults')}</div>`;
+    return;
+  }
+
+  let html = `<div class="list-header">${filteredCommands.length} ${t('commands')}</div>`;
+  for (const cmd of filteredCommands) {
+    const info = indexData[cmd.name] || {};
+    const brief = (cmd.description || '').slice(0, 80);
+    const isMel = info.isMelScript ? 'mel' : '';
+    html += `<div class="list-item" data-cmd="${cmd.name}" onclick="selectCommand('${cmd.name}')">
+      <span class="cmd-name">${cmd.name}</span>
+      <span class="cmd-brief">${escHtml(brief)}</span>
+      ${isMel ? '<span class="cmd-badge mel">MEL</span>' : ''}
+    </div>`;
+  }
+  panel.innerHTML = html;
+
+  // auto-select first
+  if (filteredCommands.length > 0 && selectedCmd && !filteredCommands.find(c => c.name === selectedCmd.name)) {
+    selectCommand(filteredCommands[0].name);
+  } else if (!selectedCmd && filteredCommands.length > 0) {
+    selectCommand(filteredCommands[0].name);
+  }
+}
+
+function selectCommand(name) {
+  if (!commandsData) return;
+  const cmd = commandsData.commands.find(c => c.name === name);
+  if (!cmd) return;
+
+  selectedCmd = cmd;
+  document.querySelectorAll('.list-item').forEach(el => el.classList.toggle('active', el.dataset.cmd === name));
+
+  const info = indexData[name] || {};
+  const desc = cmd.description || t('noDesc');
+  const examples = cmd.examples || '';
+  const isMel = info.isMelScript;
+
+  let metaHtml = '';
+  if (info.category) metaHtml += `<span>${escHtml(info.category)}</span>`;
+  if (info.subcategory) metaHtml += `<span>${escHtml(info.subcategory)}</span>`;
+  if (isMel) metaHtml += `<span class="mel-tag">${t('melScript')}</span>`;
+
+  let examplesHtml = '';
+  if (examples) {
+    examplesHtml = `
+      <div class="section-title">${t('pyExample')}</div>
+      <div class="code-block">
+        <div class="code-header">
+          <span>Maya ${currentVersion}</span>
+          <button class="copy-btn" onclick="copyCode(this)">${t('copy')}</button>
+        </div>
+        <pre><code>${escHtml(examples)}</code></pre>
+      </div>`;
+  }
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail-cmd-name">
+      <a href="/proxy?url=${encodeURIComponent(cmd.url || '#')}" target="_blank" rel="noopener">${escHtml(name)}</a>
+    </div>
+    <div class="detail-url">
+      <a href="/proxy?url=${encodeURIComponent(cmd.url || '#')}" target="_blank" rel="noopener">${escHtml(cmd.url || '')}</a>
+    </div>
+    <div class="detail-meta">${metaHtml}</div>
+    <div class="section-title">${t('description')}</div>
+    <div class="detail-desc">${escHtml(desc)}</div>
+    ${examplesHtml}
+  `;
+
+  // scroll list item into view
+  const active = document.querySelector('.list-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = t('copied');
+    setTimeout(() => btn.textContent = t('copy'), 1500);
+  });
+}
+
+// --- Helpers ---
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// --- Keyboard navigation ---
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) return;
+  if (e.target.tagName === 'INPUT') {
+    if (e.key === 'Escape') {
+      document.getElementById('searchInput').blur();
+      document.getElementById('searchInput').value = '';
+      filterCommands();
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      document.getElementById('searchInput').blur();
+      navigateList(1);
+    }
+    return;
+  }
+  if (e.key === '/' && e.target === document.body) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    navigateList(e.key === 'ArrowDown' ? 1 : -1);
+  }
+});
+
+function navigateList(dir) {
+  const items = [...document.querySelectorAll('.list-item')];
+  if (items.length === 0) return;
+  const activeIdx = items.findIndex(el => el.classList.contains('active'));
+  const nextIdx = Math.max(0, Math.min(items.length - 1, (activeIdx === -1 ? 0 : activeIdx) + dir));
+  if (items[nextIdx]) selectCommand(items[nextIdx].dataset.cmd);
+}
+</script>
+</body>
+</html>
