@@ -1,21 +1,22 @@
 {
   "name": "maya_doc",
   "version": "1.0.0",
-  "description": "Maya Python command documentation scraper & browser",
+  "description": "Maya Python command documentation scraper, browser, IDE skills & control scripts",
   "main": "index.js",
   "scripts": {
-    "scrape": "node scraper.js",
-    "scrape:2025": "node scraper.js --version=2025",
-    "scrape:2022": "node scraper.js --version=2022",
-    "scrape:2020": "node scraper.js --version=2020",
-    "cats": "node scrape_cats.js",
-    "cats:2025": "node scrape_cats.js --version=2025",
-    "cats:2022": "node scrape_cats.js --version=2022",
-    "cats:2020": "node scrape_cats.js --version=2020",
-    "all:2025": "node scrape_cats.js --version=2025 && node scraper.js --version=2025",
-    "all:2022": "node scrape_cats.js --version=2022 && node scraper.js --version=2022",
-    "all:2020": "node scrape_cats.js --version=2020 && node scraper.js --version=2020",
-    "browse": "node server.js",
+    "scrape": "node docs-crawler/scraper.js",
+    "scrape:2025": "node docs-crawler/scraper.js --version=2025",
+    "scrape:2022": "node docs-crawler/scraper.js --version=2022",
+    "scrape:2020": "node docs-crawler/scraper.js --version=2020",
+    "cats": "node docs-crawler/scrape_cats.js",
+    "cats:2025": "node docs-crawler/scrape_cats.js --version=2025",
+    "cats:2022": "node docs-crawler/scrape_cats.js --version=2022",
+    "cats:2020": "node docs-crawler/scrape_cats.js --version=2020",
+    "all:2025": "node docs-crawler/scrape_cats.js --version=2025 && node docs-crawler/scraper.js --version=2025",
+    "all:2022": "node docs-crawler/scrape_cats.js --version=2022 && node docs-crawler/scraper.js --version=2022",
+    "all:2020": "node docs-crawler/scrape_cats.js --version=2020 && node docs-crawler/scraper.js --version=2020",
+    "browse": "node docs-crawler/server.js",
+    "proxy": "node ws-maya-proxy.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -23,6 +24,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cheerio": "^1.2.0"
+    "cheerio": "^1.2.0",
+    "ws": "^8.21.0"
   }
 }

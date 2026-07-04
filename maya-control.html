@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maya Remote Control</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --bg4: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --border: #30363d;
+  --slider-bg: #21262d;
+  --slider-thumb: #58a6ff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+header h1 svg { width: 24px; height: 24px; }
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.status-indicator.connected {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--accent2);
+}
+.status-indicator.disconnected {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--red);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+.status-indicator.connected .status-dot { background: var(--accent2); }
+.status-indicator.disconnected .status-dot { background: var(--red); animation: none; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.connect-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.connect-btn:hover { background: var(--bg4); border-color: var(--accent); }
+
+main {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.object-selector {
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+}
+.object-selector label {
+  font-size: 13px;
+  color: var(--text2);
+  margin-right: 12px;
+}
+.object-selector input {
+  flex: 1;
+  max-width: 300px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.object-selector input:focus { border-color: var(--accent); }
+.object-selector button {
+  margin-left: 12px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.object-selector button:hover { background: #4895ef; }
+.object-selector .hint {
+  font-size: 12px;
+  color: var(--text2);
+  margin-left: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.control-panel {
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+.control-panel h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-panel h3 svg { width: 18px; height: 18px; }
+
+.slider-row {
+  margin-bottom: 16px;
+}
+.slider-row:last-child { margin-bottom: 0; }
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.slider-label span:first-child { font-weight: 500; color: var(--text); }
+.slider-label span:last-child {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  min-width: 50px;
+  text-align: right;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--slider-bg);
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--slider-thumb);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--slider-thumb);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.command-panel {
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+.command-panel h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.command-panel h3 svg { width: 18px; height: 18px; }
+.command-input {
+  display: flex;
+  gap: 10px;
+}
+.command-input textarea {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+}
+.command-input textarea:focus { border-color: var(--accent); }
+.command-input button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.command-input button:hover { background: #4895ef; }
+
+.result-area {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  max-height: 100px;
+  overflow-y: auto;
+}
+.result-area.error { color: var(--red); }
+.result-area.success { color: var(--accent2); }
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.preset-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.preset-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--accent); }
+
+@media (max-width: 768px) {
+  header { flex-direction: column; gap: 12px; }
+  .status-bar { width: 100%; justify-content: space-between; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7"/>
+      <rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+    </svg>
+    Maya Remote Control
+  </h1>
+  <div class="status-bar">
+    <div class="status-indicator disconnected" id="statusIndicator">
+      <span class="status-dot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="toggleConnection()">Connect</button>
+  </div>
+</header>
+
+<main>
+  <div class="object-selector">
+    <label>Target Object:</label>
+    <input type="text" id="objectName" value="pSphere1" placeholder="e.g. pSphere1">
+    <button onclick="createObject()">Create Sphere</button>
+    <span class="hint">Enter object name or click to create a new sphere</span>
+  </div>
+
+  <div class="grid">
+    <div class="control-panel">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M2 12h20"/>
+        </svg>
+        Translate
+      </h3>
+      <div class="slider-row">
+        <div class="slider-label"><span>X</span><span id="txVal">0.00</span></div>
+        <input type="range" min="-10" max="10" step="0.1" value="0" oninput="updateSlider('translateX', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Y</span><span id="tyVal">0.00</span></div>
+        <input type="range" min="-10" max="10" step="0.1" value="0" oninput="updateSlider('translateY', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Z</span><span id="tzVal">0.00</span></div>
+        <input type="range" min="-10" max="10" step="0.1" value="0" oninput="updateSlider('translateZ', this.value)">
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Rotate
+      </h3>
+      <div class="slider-row">
+        <div class="slider-label"><span>X</span><span id="rxVal">0.00</span></div>
+        <input type="range" min="-180" max="180" step="1" value="0" oninput="updateSlider('rotateX', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Y</span><span id="ryVal">0.00</span></div>
+        <input type="range" min="-180" max="180" step="1" value="0" oninput="updateSlider('rotateY', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Z</span><span id="rzVal">0.00</span></div>
+        <input type="range" min="-180" max="180" step="1" value="0" oninput="updateSlider('rotateZ', this.value)">
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20M12 2v20"/>
+        </svg>
+        Scale
+      </h3>
+      <div class="slider-row">
+        <div class="slider-label"><span>X</span><span id="sxVal">1.00</span></div>
+        <input type="range" min="0" max="5" step="0.1" value="1" oninput="updateSlider('scaleX', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Y</span><span id="syVal">1.00</span></div>
+        <input type="range" min="0" max="5" step="0.1" value="1" oninput="updateSlider('scaleY', this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span>Z</span><span id="szVal">1.00</span></div>
+        <input type="range" min="0" max="5" step="0.1" value="1" oninput="updateSlider('scaleZ', this.value)">
+      </div>
+    </div>
+  </div>
+
+  <div class="command-panel">
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Custom Command
+    </h3>
+    <div class="command-input">
+      <textarea id="commandInput" placeholder="import maya.cmds as cmds&#10;cmds.setAttr('pSphere1.translateY', 5)"></textarea>
+      <button onclick="sendCommand()">Execute</button>
+    </div>
+    <div class="result-area" id="resultArea"></div>
+    <div class="preset-buttons">
+      <button class="preset-btn" onclick="loadPreset('sphere')">Create Sphere</button>
+      <button class="preset-btn" onclick="loadPreset('cube')">Create Cube</button>
+      <button class="preset-btn" onclick="loadPreset('cone')">Create Cone</button>
+      <button class="preset-btn" onclick="loadPreset('torus')">Create Torus</button>
+      <button class="preset-btn" onclick="loadPreset('list')">List Objects</button>
+      <button class="preset-btn" onclick="loadPreset('delete')">Delete Selected</button>
+    </div>
+  </div>
+</main>
+
+<script>
+let ws = null;
+let isConnected = false;
+const WS_URL = `ws://${window.location.host}`;
+
+function toggleConnection() {
+  if (isConnected) {
+    disconnect();
+  } else {
+    connect();
+  }
+}
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+  
+  ws.onopen = () => {
+    isConnected = true;
+    updateStatus(true);
+    document.getElementById('connectBtn').textContent = 'Disconnect';
+  };
+  
+  ws.onclose = () => {
+    isConnected = false;
+    updateStatus(false);
+    document.getElementById('connectBtn').textContent = 'Connect';
+  };
+  
+  ws.onerror = () => {
+    isConnected = false;
+    updateStatus(false);
+  };
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'result') {
+      showResult(data.result, 'success');
+    } else if (data.type === 'error') {
+      showResult(data.error, 'error');
+    }
+  };
+}
+
+function disconnect() {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+}
+
+function updateStatus(connected) {
+  const indicator = document.getElementById('statusIndicator');
+  const text = document.getElementById('statusText');
+  if (connected) {
+    indicator.classList.remove('disconnected');
+    indicator.classList.add('connected');
+    text.textContent = 'Connected to Maya';
+  } else {
+    indicator.classList.remove('connected');
+    indicator.classList.add('disconnected');
+    text.textContent = 'Disconnected';
+  }
+}
+
+function getObject() {
+  return document.getElementById('objectName').value.trim() || 'pSphere1';
+}
+
+let rafId = null;
+function updateSlider(attr, value) {
+  const obj = getObject();
+  const displayId = attr.toLowerCase().replace('scale', 's').replace('translate', 't').replace('rotate', 'r') + 'Val';
+  document.getElementById(displayId).textContent = parseFloat(value).toFixed(2);
+  
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    const command = `import maya.cmds as cmds; cmds.setAttr('${obj}.${attr}', ${value})`;
+    sendToMaya(command);
+  });
+}
+
+function sendCommand() {
+  const cmd = document.getElementById('commandInput').value.trim();
+  if (cmd) {
+    sendToMaya(cmd);
+  }
+}
+
+function createObject() {
+  const obj = getObject();
+  const command = `import maya.cmds as cmds; cmds.polySphere(name='${obj}')`;
+  sendToMaya(command);
+}
+
+function sendToMaya(command) {
+  if (!isConnected || !ws) {
+    showResult('Not connected to Maya', 'error');
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'command', command }));
+}
+
+function showResult(text, type) {
+  const area = document.getElementById('resultArea');
+  area.textContent = text;
+  area.className = 'result-area ' + type;
+}
+
+function loadPreset(type) {
+  const obj = getObject();
+  let cmd = '';
+  switch(type) {
+    case 'sphere': cmd = `import maya.cmds as cmds; cmds.polySphere(name='${obj}')`; break;
+    case 'cube': cmd = `import maya.cmds as cmds; cmds.polyCube(name='${obj}')`; break;
+    case 'cone': cmd = `import maya.cmds as cmds; cmds.polyCone(name='${obj}')`; break;
+    case 'torus': cmd = `import maya.cmds as cmds; cmds.polyTorus(name='${obj}')`; break;
+    case 'list': cmd = 'import maya.cmds as cmds; print(cmds.ls(geometry=True))'; break;
+    case 'delete': cmd = 'import maya.cmds as cmds; cmds.delete(cmds.ls(selection=True))'; break;
+  }
+  document.getElementById('commandInput').value = cmd;
+  sendToMaya(cmd);
+}
+
+window.addEventListener('beforeunload', disconnect);
+</script>
+</body>
+</html>

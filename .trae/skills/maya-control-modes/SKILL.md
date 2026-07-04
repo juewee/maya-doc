@@ -7,6 +7,8 @@ description: "Provides two methods to control Maya externally: (1) Headless Stan
 
 Two methods to control Maya externally from Python scripts, without writing code inside Maya's Script Editor.
 
+> **配套即用脚本**：本项目的 [tools/](../../../tools/) 目录提供了 Command Port 模式的即用实现（check_scene.py、play_scene.py、send_to_maya.py），可直接运行。
+
 ## Method Comparison
 
 | 特性 | Standalone (mayapy) | Command Port |

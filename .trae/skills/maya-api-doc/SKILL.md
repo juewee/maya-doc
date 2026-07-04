@@ -18,6 +18,7 @@ This skill serves as the **central guide** for all Maya API documentation skills
 **How they work together**:
 - This overview skill (`maya-api-doc`) helps you **find and understand** Maya commands
 - `maya-control-modes` skill helps you **execute** those commands in actual Maya instances
+- Project's [tools/](../../../tools/) directory provides ready-to-use Command Port scripts that implement the patterns from `maya-control-modes`
 
 ---
 
